@@ -1,0 +1,8 @@
+oneframe:
+  base-url: http://localhost:8080
+  token: 10dc303535874aeccc86a8251e6992f5
+
+forex:
+  cache-ttl-minutes: 5
+  refresh-interval-ms: 240000
+  supported-currencies: AUD,CAD,CHF,EUR,GBP,NZD,JPY,SGD,USD

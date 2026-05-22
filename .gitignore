@@ -1,0 +1,25 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# macOS
+.DS_Store
+
+# Spring Boot
+*.log
+logs/
+
+# Kotlin
+*.class
+
+# Environment
+.env
+*.env.local
