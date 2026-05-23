@@ -1,0 +1,14 @@
+services:
+  one-frame:
+    image: paidyinc/one-frame
+    ports:
+      - "8080:8080"
+
+  forex-app:
+    build: .
+    ports:
+      - "9090:9090"
+    environment:
+      - ONEFRAME_BASE_URL=http://one-frame:8080
+    depends_on:
+      - one-frame

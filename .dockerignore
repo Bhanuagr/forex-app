@@ -1,0 +1,12 @@
+.git
+.gradle
+.idea
+src
+gradle
+gradlew
+gradlew.bat
+build/classes
+build/kotlin
+build/reports
+build/test-results
+build/tmp
