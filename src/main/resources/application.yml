@@ -7,5 +7,5 @@ oneframe:
 
 forex:
   cache-ttl-minutes: 5
-  refresh-interval-ms: 240000
+  refresh-interval-ms: 120000
   supported-currencies: AUD,CAD,CHF,EUR,GBP,NZD,JPY,SGD,USD
