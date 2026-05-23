@@ -22,8 +22,8 @@ class OneFrameClient(
     private val log = LoggerFactory.getLogger(javaClass)
 
     private val requestFactory = SimpleClientHttpRequestFactory().apply {
-        setConnectTimeout(3000)
-        setReadTimeout(5000)
+        setConnectTimeout(oneFrameProperties.connectTimeoutMs)
+        setReadTimeout(oneFrameProperties.readTimeoutMs)
     }
 
     private val restClient: RestClient = RestClient.builder()

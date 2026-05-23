@@ -1,6 +1,8 @@
 oneframe:
   base-url: http://localhost:8080
   token: test-token
+  connect-timeout-ms: 3000
+  read-timeout-ms: 5000
 
 forex:
   cache-ttl-minutes: 5

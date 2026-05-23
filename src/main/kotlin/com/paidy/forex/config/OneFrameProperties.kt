@@ -6,4 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class OneFrameProperties(
     val baseUrl: String,
     val token: String,
+    val connectTimeoutMs: Int,
+    val readTimeoutMs: Int,
 )
