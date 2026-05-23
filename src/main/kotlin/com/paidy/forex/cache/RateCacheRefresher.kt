@@ -18,7 +18,7 @@ class RateCacheRefresher(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @Scheduled(fixedRateString = "\${forex.refresh-interval-ms}", initialDelay = 0)
+    @Scheduled(fixedDelayString = "\${forex.refresh-interval-ms}", initialDelay = 0)
     fun refresh() {
         val pairs = buildPairs()
         log.info("Refreshing ${pairs.size} currency pairs from OneFrame")
