@@ -9,6 +9,7 @@ import com.paidy.forex.domain.Rate
 import com.paidy.forex.domain.RatePair
 import com.paidy.forex.domain.Timestamp
 import org.slf4j.LoggerFactory
+import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
@@ -20,9 +21,15 @@ class OneFrameClient(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
+    private val requestFactory = SimpleClientHttpRequestFactory().apply {
+        setConnectTimeout(3000)
+        setReadTimeout(5000)
+    }
+
     private val restClient: RestClient = RestClient.builder()
         .baseUrl(oneFrameProperties.baseUrl)
         .defaultHeader("token", oneFrameProperties.token)
+        .requestFactory(requestFactory)
         .build()
 
     fun fetchAll(pairs: List<RatePair>): Either<DomainError, List<Rate>> {

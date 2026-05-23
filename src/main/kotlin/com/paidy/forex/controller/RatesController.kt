@@ -1,6 +1,5 @@
 package com.paidy.forex.controller
 
-import com.paidy.forex.domain.DomainError
 import com.paidy.forex.domain.Either
 import com.paidy.forex.domain.Rate
 import com.paidy.forex.service.RateService
