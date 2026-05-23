@@ -1,26 +1,22 @@
 package com.paidy.forex.cache
 
-import com.paidy.forex.config.ForexProperties
+import com.github.benmanes.caffeine.cache.Caffeine
 import com.paidy.forex.domain.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.OffsetDateTime
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 class RateCacheTest {
-
-    private val properties = ForexProperties(
-        cacheTtlMinutes = 5,
-        refreshIntervalMs = 240000,
-        supportedCurrencies = "USD,JPY,EUR",
-    )
 
     private lateinit var cache: RateCache
 
     @BeforeEach
     fun setUp() {
-        cache = RateCache(properties)
+        cache = RateCache(Caffeine.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build())
     }
 
     private fun rate(from: Currency, to: Currency, price: String = "1.23") = Rate(
@@ -28,6 +24,14 @@ class RateCacheTest {
         price = Price(BigDecimal(price)),
         timestamp = Timestamp(OffsetDateTime.now()),
     )
+
+    private fun cacheWithTicker(ttlMinutes: Long = 5, ticker: AtomicLong): RateCache =
+        RateCache(
+            Caffeine.newBuilder()
+                .expireAfterWrite(ttlMinutes, TimeUnit.MINUTES)
+                .ticker { ticker.get() }
+                .build()
+        )
 
     @Test
     fun `get returns RateNotAvailable when cache is empty`() {
@@ -76,17 +80,26 @@ class RateCacheTest {
     }
 
     @Test
-    fun `get returns RateNotAvailable when entry is stale`() {
-        val staleCache = RateCache(ForexProperties(
-            cacheTtlMinutes = 0,
-            refreshIntervalMs = 240000,
-            supportedCurrencies = "USD,JPY",
-        ))
-        staleCache.putAll(listOf(rate(Currency.USD, Currency.JPY)))
+    fun `get returns RateNotAvailable when entry has expired`() {
+        val ticker = AtomicLong(0)
+        val testCache = cacheWithTicker(ticker = ticker)
 
-        Thread.sleep(1100)
+        testCache.putAll(listOf(rate(Currency.USD, Currency.JPY)))
+        ticker.set(TimeUnit.MINUTES.toNanos(6))
 
-        val result = staleCache.get(RatePair(Currency.USD, Currency.JPY))
-        assertEquals(Either.Left(DomainError.RateNotAvailable), result)
+        assertEquals(Either.Left(DomainError.RateNotAvailable), testCache.get(RatePair(Currency.USD, Currency.JPY)))
+    }
+
+    @Test
+    fun `get returns rate when entry is within TTL`() {
+        val ticker = AtomicLong(0)
+        val testCache = cacheWithTicker(ticker = ticker)
+
+        testCache.putAll(listOf(rate(Currency.USD, Currency.JPY, "99.00")))
+        ticker.set(TimeUnit.MINUTES.toNanos(4))
+
+        val result = testCache.get(RatePair(Currency.USD, Currency.JPY))
+        assertTrue(result is Either.Right)
+        assertEquals(BigDecimal("99.00"), (result as Either.Right).value.price.value)
     }
 }
