@@ -41,8 +41,7 @@ class RateCacheTest {
 
     @Test
     fun `get returns rate after putAll`() {
-        val rate = rate(Currency.USD, Currency.JPY, "148.50")
-        cache.putAll(listOf(rate))
+        cache.putAll(listOf(rate(Currency.USD, Currency.JPY, "148.50")))
 
         val result = cache.get(RatePair(Currency.USD, Currency.JPY))
         assertTrue(result is Either.Right)
@@ -52,8 +51,25 @@ class RateCacheTest {
     @Test
     fun `get returns RateNotAvailable for unknown pair`() {
         cache.putAll(listOf(rate(Currency.USD, Currency.JPY)))
-        val result = cache.get(RatePair(Currency.EUR, Currency.GBP))
-        assertEquals(Either.Left(DomainError.RateNotAvailable), result)
+        assertEquals(Either.Left(DomainError.RateNotAvailable), cache.get(RatePair(Currency.EUR, Currency.GBP)))
+    }
+
+    @Test
+    fun `get returns inverted rate for reverse pair`() {
+        cache.putAll(listOf(rate(Currency.USD, Currency.JPY, "2.00")))
+
+        val result = cache.get(RatePair(Currency.JPY, Currency.USD))
+        assertTrue(result is Either.Right)
+        val price = (result as Either.Right).value.price.value
+        assertEquals(0, BigDecimal("0.5").compareTo(price), "Expected 1/2.00 = 0.5, got $price")
+        assertEquals(Currency.JPY, result.value.pair.from)
+        assertEquals(Currency.USD, result.value.pair.to)
+    }
+
+    @Test
+    fun `get returns RateNotAvailable when neither direction is cached`() {
+        cache.putAll(listOf(rate(Currency.USD, Currency.JPY)))
+        assertEquals(Either.Left(DomainError.RateNotAvailable), cache.get(RatePair(Currency.EUR, Currency.GBP)))
     }
 
     @Test
@@ -62,7 +78,6 @@ class RateCacheTest {
         cache.putAll(listOf(rate(Currency.USD, Currency.JPY, "150.00")))
 
         val result = cache.get(RatePair(Currency.USD, Currency.JPY))
-        assertTrue(result is Either.Right)
         assertEquals(BigDecimal("150.00"), (result as Either.Right).value.price.value)
     }
 
@@ -101,5 +116,16 @@ class RateCacheTest {
         val result = testCache.get(RatePair(Currency.USD, Currency.JPY))
         assertTrue(result is Either.Right)
         assertEquals(BigDecimal("99.00"), (result as Either.Right).value.price.value)
+    }
+
+    @Test
+    fun `inverted rate also expires correctly`() {
+        val ticker = AtomicLong(0)
+        val testCache = cacheWithTicker(ticker = ticker)
+
+        testCache.putAll(listOf(rate(Currency.USD, Currency.JPY, "2.00")))
+        ticker.set(TimeUnit.MINUTES.toNanos(6))
+
+        assertEquals(Either.Left(DomainError.RateNotAvailable), testCache.get(RatePair(Currency.JPY, Currency.USD)))
     }
 }

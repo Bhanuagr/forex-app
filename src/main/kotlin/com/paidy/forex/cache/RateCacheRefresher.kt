@@ -41,8 +41,8 @@ class RateCacheRefresher(
                 }
             }
             .let { currencies ->
-                currencies.flatMap { from ->
-                    currencies.filter { it != from }.map { to -> RatePair(from, to) }
+                currencies.flatMapIndexed { i, from ->
+                    currencies.drop(i + 1).map { to -> RatePair(from, to) }
                 }
             }
 }
