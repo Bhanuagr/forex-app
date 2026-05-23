@@ -28,6 +28,7 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.wiremock:wiremock-standalone:3.5.4")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.3.1")
 }
 
 tasks.withType<KotlinCompile> {
