@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 import java.time.OffsetDateTime
+import java.time.format.DateTimeParseException
 
 @Component
 class OneFrameClient(
@@ -48,7 +49,7 @@ class OneFrameClient(
                 return Either.Left(DomainError.RateLookupFailed("Empty response from OneFrame"))
             }
 
-            val rates = responses.map { it.toDomain() }
+            val rates = responses.mapNotNull { it.toDomainOrNull() }
             Either.Right(rates)
         } catch (ex: RestClientException) {
             log.warn("OneFrame HTTP error: ${ex.message}")
@@ -59,14 +60,22 @@ class OneFrameClient(
         }
     }
 
-    private fun OneFrameResponse.toDomain(): Rate {
-        val fromCurrency = Currency.fromString(from).getOrThrow()
-        val toCurrency = Currency.fromString(to).getOrThrow()
-        return Rate(
-            pair = RatePair(fromCurrency, toCurrency),
-            price = Price(price),
-            timestamp = Timestamp(OffsetDateTime.parse(timeStamp)),
-        )
+    private fun OneFrameResponse.toDomainOrNull(): Rate? {
+        return try {
+            val fromCurrency = Currency.fromString(from).getOrThrow()
+            val toCurrency = Currency.fromString(to).getOrThrow()
+            Rate(
+                pair = RatePair(fromCurrency, toCurrency),
+                price = Price(price),
+                timestamp = Timestamp(OffsetDateTime.parse(timeStamp)),
+            )
+        } catch (ex: DateTimeParseException) {
+            log.warn("Skipping rate $from->$to — malformed timestamp '$timeStamp': ${ex.message}")
+            null
+        } catch (ex: IllegalStateException) {
+            log.warn("Skipping rate $from->$to — unrecognised currency: ${ex.message}")
+            null
+        }
     }
 
     private fun <R> Either<DomainError, R>.getOrThrow(): R = when (this) {

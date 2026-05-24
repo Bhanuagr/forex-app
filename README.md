@@ -141,6 +141,10 @@ Errors are modelled as `Either<DomainError, T>` throughout the domain layer. Thi
 
 ## Trade-offs and known limitations
 
+### Startup race condition
+The service starts and begins the first cache refresh (`initialDelay=0`) but there is a small window (typically 1–2 seconds) between the process starting and the first refresh completing. If a load balancer or Kubernetes marks the pod ready before the cache is warm, early requests return `503`.
+The fix is a readiness probe that returns `DOWN` until the cache has at least one entry. Kubernetes will hold traffic until it returns `UP`. With Redis, rolling deployments avoid this entirely since the shared cache stays warm across restarts but a cold start (first deploy or cache flush) still has the same gap.
+
 ### Two consecutive refresh failures cause a ~60s gap
 With TTL=5min and refresh=2min, two consecutive full failures (each exhausting all retries) leave a ~60-second window where cache entries expire before the next refresh succeeds. Mitigation options:
 - Increase TTL to 10 minutes - larger buffer but rates could be up to 10 minutes stale
@@ -149,6 +153,13 @@ With TTL=5min and refresh=2min, two consecutive full failures (each exhausting a
 
 ### Fixed currency set
 Supported currencies are defined in `application.yml` and validated against a sealed `Currency` class. Adding a new currency requires a code change and redeployment. A production system would drive currency support from a database or external config without requiring a release.
+
+### In-memory cache does not scale horizontally
+The current Caffeine cache is local to each instance. If the service is horizontally scaled behind a load balancer, each instance maintains its own cache and runs its own refresh scheduler independently - meaning N instances make N OneFrame calls per refresh cycle, multiplying the API budget usage by the number of instances.
+
+For horizontal scaling, the cache should be replaced with a shared distributed cache such as Redis. Each instance would read from and write to the same Redis store so only one refresh is needed regardless of instance count.
+
+Additionally, with multiple instances each running `@Scheduled` independently, the refresh scheduler fires N times per interval - each instance calling OneFrame separately. This multiplies API usage by instance count and can exhaust the 1,000/day budget quickly. The fix is to elect a single scheduler leader using a distributed lock (e.g. Redis or ShedLock library) so only one instance refreshes the cache at a time while all instances read from the shared store.
 
 ### Metrics (not implemented)
 In production this service would benefit from:

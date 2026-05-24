@@ -73,6 +73,12 @@ class RateCacheTest {
     }
 
     @Test
+    fun `get returns RateNotAvailable when reverse pair has zero price`() {
+        cache.putAll(listOf(rate(Currency.USD, Currency.JPY, "0")))
+        assertEquals(Either.Left(DomainError.RateNotAvailable), cache.get(RatePair(Currency.JPY, Currency.USD)))
+    }
+
+    @Test
     fun `putAll overwrites existing entry`() {
         cache.putAll(listOf(rate(Currency.USD, Currency.JPY, "100.00")))
         cache.putAll(listOf(rate(Currency.USD, Currency.JPY, "150.00")))

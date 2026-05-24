@@ -15,7 +15,7 @@ class RateCache(private val store: Cache<RatePair, Rate>) {
 
     fun get(pair: RatePair): Either<DomainError, Rate> =
         (store.getIfPresent(pair)?.let { Either.Right(it) }
-            ?: store.getIfPresent(pair.reverse())?.let { Either.Right(it.invert(pair)) })
+            ?: store.getIfPresent(pair.reverse())?.let { it.invert(pair) })
             ?: Either.Left(DomainError.RateNotAvailable)
 
     fun putAll(rates: List<Rate>) =
@@ -23,8 +23,12 @@ class RateCache(private val store: Cache<RatePair, Rate>) {
 
     private fun RatePair.reverse() = RatePair(to, from)
 
-    private fun Rate.invert(requestedPair: RatePair) = copy(
-        pair = requestedPair,
-        price = Price(BigDecimal.ONE.divide(price.value, MathContext.DECIMAL64)),
-    )
+    private fun Rate.invert(requestedPair: RatePair): Either<DomainError, Rate> {
+        if (price.value.compareTo(BigDecimal.ZERO) == 0)
+            return Either.Left(DomainError.RateNotAvailable)
+        return Either.Right(copy(
+            pair = requestedPair,
+            price = Price(BigDecimal.ONE.divide(price.value, MathContext.DECIMAL64)),
+        ))
+    }
 }

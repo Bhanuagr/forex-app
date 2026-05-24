@@ -167,4 +167,56 @@ class OneFrameClientTest {
 
         wireMock.start()
     }
+
+    @Test
+    fun `fetchAll skips entries with unrecognised currency and returns valid ones`() {
+        wireMock.stubFor(
+            get(urlPathEqualTo("/rates"))
+                .willReturn(
+                    okJson("""
+                        [
+                          {"from":"USD","to":"XYZ","bid":0.6,"ask":0.8,"price":0.7,"time_stamp":"2026-05-23T10:00:00.000Z"},
+                          {"from":"EUR","to":"GBP","bid":0.5,"ask":0.7,"price":0.6,"time_stamp":"2026-05-23T10:00:00.000Z"}
+                        ]
+                    """.trimIndent())
+                )
+        )
+
+        val result = client.fetchAll(listOf(
+            RatePair(Currency.USD, Currency.JPY),
+            RatePair(Currency.EUR, Currency.GBP),
+        ))
+
+        assertTrue(result is Either.Right)
+        val rates = (result as Either.Right).value
+        assertEquals(1, rates.size)
+        assertEquals(Currency.EUR, rates[0].pair.from)
+        assertEquals(Currency.GBP, rates[0].pair.to)
+    }
+
+    @Test
+    fun `fetchAll skips entries with malformed timestamp and returns valid ones`() {
+        wireMock.stubFor(
+            get(urlPathEqualTo("/rates"))
+                .willReturn(
+                    okJson("""
+                        [
+                          {"from":"USD","to":"JPY","bid":0.6,"ask":0.8,"price":0.7,"time_stamp":"not-a-date"},
+                          {"from":"EUR","to":"GBP","bid":0.5,"ask":0.7,"price":0.6,"time_stamp":"2026-05-23T10:00:00.000Z"}
+                        ]
+                    """.trimIndent())
+                )
+        )
+
+        val result = client.fetchAll(listOf(
+            RatePair(Currency.USD, Currency.JPY),
+            RatePair(Currency.EUR, Currency.GBP),
+        ))
+
+        assertTrue(result is Either.Right)
+        val rates = (result as Either.Right).value
+        assertEquals(1, rates.size)
+        assertEquals(Currency.EUR, rates[0].pair.from)
+        assertEquals(Currency.GBP, rates[0].pair.to)
+    }
 }
