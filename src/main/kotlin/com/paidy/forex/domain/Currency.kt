@@ -24,7 +24,7 @@ sealed class Currency {
     }
 
     companion object {
-        private val all: List<Currency> = listOf(AUD, CAD, CHF, EUR, GBP, NZD, JPY, SGD, USD)
+        private val all: List<Currency> by lazy { listOf(AUD, CAD, CHF, EUR, GBP, NZD, JPY, SGD, USD) }
 
         fun all(): List<Currency> = all
 

@@ -21,4 +21,6 @@ sealed class Either<out L, out R> {
         is Left -> Left(value)
         is Right -> transform(value)
     }
+
+    fun getOrNull(): R? = if (this is Right) value else null
 }

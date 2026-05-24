@@ -61,9 +61,11 @@ class OneFrameClient(
     }
 
     private fun OneFrameResponse.toDomainOrNull(): Rate? {
+        val fromCurrency = Currency.fromString(from).getOrNull()
+            ?: run { log.warn("Skipping rate $from->$to — unrecognised currency: $from"); return null }
+        val toCurrency = Currency.fromString(to).getOrNull()
+            ?: run { log.warn("Skipping rate $from->$to — unrecognised currency: $to"); return null }
         return try {
-            val fromCurrency = Currency.fromString(from).getOrThrow()
-            val toCurrency = Currency.fromString(to).getOrThrow()
             Rate(
                 pair = RatePair(fromCurrency, toCurrency),
                 price = Price(price),
@@ -72,14 +74,6 @@ class OneFrameClient(
         } catch (ex: DateTimeParseException) {
             log.warn("Skipping rate $from->$to — malformed timestamp '$timeStamp': ${ex.message}")
             null
-        } catch (ex: IllegalStateException) {
-            log.warn("Skipping rate $from->$to — unrecognised currency: ${ex.message}")
-            null
         }
-    }
-
-    private fun <R> Either<DomainError, R>.getOrThrow(): R = when (this) {
-        is Either.Right -> value
-        is Either.Left -> throw IllegalStateException("Unexpected currency from OneFrame: $value")
     }
 }
