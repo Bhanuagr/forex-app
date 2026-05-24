@@ -1,13 +1,19 @@
 package com.paidy.forex.controller
 
 import com.paidy.forex.domain.DomainError
+import io.swagger.v3.oas.annotations.media.Schema
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
-data class ErrorResponse(val error: String, val code: String)
+data class ErrorResponse(
+    @Schema(description = "Human readable error message", example = "Currency 'XYZ' is not supported")
+    val error: String,
+    @Schema(description = "Machine readable error code", example = "CURRENCY_NOT_FOUND")
+    val code: String,
+)
 
 @RestControllerAdvice
 class ErrorHandler {

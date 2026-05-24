@@ -13,8 +13,8 @@ The core challenge: the upstream [One-Frame](https://hub.docker.com/r/paidyinc/o
 Starts both One-Frame and the forex proxy with a single command.
 
 ```bash
-./gradlew build -x test
-docker-compose up
+./gradlew build -x test && docker-compose up       # macOS / Linux
+gradlew.bat build -x test && docker-compose up     # Windows
 ```
 
 The app is ready at `http://localhost:9090`.
@@ -27,9 +27,11 @@ docker run -p 8080:8080 paidyinc/one-frame
 ```
 
 **Step 2** - Run the app:
+
+Requires Java 21. Set `JAVA_HOME` for your platform if not already pointing to Java 21 then run:
 ```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 21)
-./gradlew bootRun
+./gradlew bootRun        # macOS / Linux
+gradlew.bat bootRun      # Windows
 ```
 
 The app is ready at `http://localhost:9090`.
@@ -37,6 +39,8 @@ The app is ready at `http://localhost:9090`.
 ---
 
 ## API
+
+Swagger UI is available at `http://localhost:9090/swagger-ui.html` once the app is running.
 
 ### Get exchange rate
 
@@ -127,6 +131,9 @@ Only 36 unique pairs are fetched (e.g. `USD->JPY`). If a user requests `JPY->USD
 ### Caffeine for TTL management
 The cache uses Caffeine's `expireAfterWrite`. This removes the need for a wrapper class, handles memory cleanup of expired entries automatically.
 
+### RestClient over Feign
+`OneFrameClient` uses Spring's built-in `RestClient` rather than Feign. Feign requires an additional Spring Cloud dependency and a separate configuration class for timeouts and error handling. For a single upstream API with one endpoint, `RestClient` is simpler and sufficient. Feign would be worth considering if the service needed to integrate with multiple external APIs where declarative HTTP interfaces add consistency.
+
 ### Error handling with `Either`
 Errors are modelled as `Either<DomainError, T>` throughout the domain layer. This makes failure handling explicit at compile time - callers cannot ignore an error path.
 
@@ -143,18 +150,27 @@ With TTL=5min and refresh=2min, two consecutive full failures (each exhausting a
 ### Fixed currency set
 Supported currencies are defined in `application.yml` and validated against a sealed `Currency` class. Adding a new currency requires a code change and redeployment. A production system would drive currency support from a database or external config without requiring a release.
 
+### Metrics (not implemented)
+In production this service would benefit from:
+- Cache hit/miss rate - to verify the caching strategy is working as expected
+- OneFrame refresh success/failure count - to alert on consecutive failures before the TTL gap occurs
+- Request latency - to confirm cache reads are fast
+- Retry attempt count - to detect degraded upstream health early
+
+Spring Boot Actuator with Micrometer and a Prometheus/Grafana stack would cover all of these with minimal code.
+
 ---
 
 ## Running tests
 
 ```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 21)
-./gradlew test
+./gradlew test        # macOS / Linux
+gradlew.bat test      # Windows
 ```
 
 Open the test report:
 ```bash
-open build/reports/tests/test/index.html
+open build/reports/tests/test/index.html        # macOS
 ```
 
 ---
@@ -164,7 +180,6 @@ open build/reports/tests/test/index.html
 | Property | Default | Description |
 |----------|---------|-------------|
 | `oneframe.base-url` | `http://localhost:8080` | One-Frame base URL |
-| `oneframe.token` | `10dc303535874aeccc86a8251e6992f5` | One-Frame auth token |
 | `oneframe.connect-timeout-ms` | `3000` | TCP connect timeout |
 | `oneframe.read-timeout-ms` | `5000` | HTTP read timeout |
 | `forex.cache-ttl-minutes` | `5` | How long a cached rate is considered fresh |
